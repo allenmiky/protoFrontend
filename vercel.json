@@ -1,6 +1,12 @@
 {
   "version": 2,
   "buildCommand": "npm run build",
-  "installCommand": "npm ci --legacy-peer-deps",
-  "outputDirectory": "dist"
+  "installCommand": "npm ci --prefer-offline --no-audit",
+  "outputDirectory": "dist",
+  "devCommand": "npm run dev",
+  "framework": "vite",
+  "regions": ["bom1"],
+  "env": {
+    "NODE_ENV": "production"
+  }
 }
