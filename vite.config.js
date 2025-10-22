@@ -4,13 +4,18 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-<<<<<<< HEAD
+  
+  // Server Configuration
   server: {
     allowedHosts: [
       'nondecasyllabic-nonfraudulently-mirna.ngrok-free.dev'
-    ]
-=======
-  
+    ],
+    host: true,
+    port: 3000,
+    open: true,
+    cors: true
+  },
+
   // Build Optimization
   build: {
     target: 'esnext',
@@ -39,16 +44,7 @@ export default defineConfig({
     }
   },
   
-  // Server Configuration
-  server: {
-    allowedHosts: true,
-    host: true,
-    port: 3000,
-    open: true, // Automatically open browser
-    cors: true
-  },
-  
-  // Preview Configuration (Production Preview)
+  // Preview Configuration
   preview: {
     host: true,
     port: 3000,
@@ -62,11 +58,10 @@ export default defineConfig({
   
   // CSS Optimization
   css: {
-    devSourcemap: false,
-    postcss: './postcss.config.js'
+    devSourcemap: false
   },
   
-  // Base Path (if deploying to subdirectory)
+  // Base Path
   base: './',
   
   // Optimize Dependency Pre-Bundling
@@ -79,6 +74,5 @@ export default defineConfig({
       'axios'
     ],
     exclude: ['@hello-pangea/dnd']
->>>>>>> 1af76e6ed00190d690d8aa3f73e2a5357644a7d8
   }
 })
