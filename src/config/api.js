@@ -1,7 +1,13 @@
 // src/config/api.js
 import axios from "axios";
 
+<<<<<<< HEAD
 const API_BASE = import.meta.env.VITE_API_URL || "https://protodo-backend-production.up.railway.app/api";
+=======
+// const API_BASE = import.meta.env.VITE_API_URL || "https://protodobackend-production.up.railway.app/api";
+const API_BASE = import.meta.env.VITE_API_URL || "https://3f39645b6eed4510332df96d14e31ee8.serveo.net/api";
+
+>>>>>>> 521bc8925f0f945601d65c457bca3f25eff220f1
 
 const API = axios.create({
   baseURL: API_BASE,

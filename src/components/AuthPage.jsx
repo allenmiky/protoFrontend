@@ -112,8 +112,13 @@ export default function AuthPage({ darkMode, onLogin }) {
 
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
+<<<<<<< HEAD
       toast.dismiss(); // clear old toasts
       toast.success(`${activeForm === "login" ? "Logged in" : "Account created"} successfully!`, { duration: 2500 });
+=======
+   toast.dismiss(); // clear old toasts
+toast.success(`${activeForm === "login" ? "Logged in" : "Account created"} successfully!`, { duration: 4000 });
+>>>>>>> 521bc8925f0f945601d65c457bca3f25eff220f1
       onLogin(data.user, data.token);
     } catch (err) {
       toast.error(err.message);
