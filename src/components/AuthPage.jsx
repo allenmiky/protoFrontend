@@ -39,9 +39,8 @@ function ForgotPasswordModal({ onClose, darkMode }) {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -50, scale: 0.9 }}
           transition={{ duration: 0.4 }}
-          className={`rounded-xl p-6 w-full max-w-sm shadow-lg ${
-            darkMode ? "bg-gray-800 text-gray-100" : "bg-white text-gray-800"
-          }`}
+          className={`rounded-xl p-6 w-full max-w-sm shadow-lg ${darkMode ? "bg-gray-800 text-gray-100" : "bg-white text-gray-800"
+            }`}
         >
           <h2 className="text-lg font-semibold mb-4">Forgot Password</h2>
           <input
@@ -49,9 +48,8 @@ function ForgotPasswordModal({ onClose, darkMode }) {
             placeholder="Enter your email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className={`w-full mb-4 px-3 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 ${
-              darkMode ? "bg-gray-700 border-gray-600" : "bg-gray-50 border-gray-300"
-            }`}
+            className={`w-full mb-4 px-3 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 ${darkMode ? "bg-gray-700 border-gray-600" : "bg-gray-50 border-gray-300"
+              }`}
           />
           {message && (
             <p className="text-sm mb-3 text-center text-indigo-500">{message}</p>
@@ -66,9 +64,8 @@ function ForgotPasswordModal({ onClose, darkMode }) {
             </button>
             <button
               onClick={onClose}
-              className={`flex-1 py-2 rounded-lg ${
-                darkMode ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-100 hover:bg-gray-200"
-              }`}
+              className={`flex-1 py-2 rounded-lg ${darkMode ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-100 hover:bg-gray-200"
+                }`}
             >
               Close
             </button>
@@ -115,7 +112,8 @@ export default function AuthPage({ darkMode, onLogin }) {
 
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
-      toast.success(`${activeForm === "login" ? "Logged in" : "Account created"} successfully!`);
+      toast.dismiss(); // clear old toasts
+      toast.success(`${activeForm === "login" ? "Logged in" : "Account created"} successfully!`, { duration: 2500 });
       onLogin(data.user, data.token);
     } catch (err) {
       toast.error(err.message);
@@ -128,9 +126,8 @@ export default function AuthPage({ darkMode, onLogin }) {
 
   return (
     <div
-      className={`min-h-screen flex flex-col md:flex-row transition-colors duration-300 ${
-        darkMode ? "bg-gray-900 text-gray-100" : "bg-sky-50 text-gray-900"
-      }`}
+      className={`min-h-screen flex flex-col md:flex-row transition-colors duration-300 ${darkMode ? "bg-gray-900 text-gray-100" : "bg-sky-50 text-gray-900"
+        }`}
     >
       <Toaster position="top-center" reverseOrder={false} />
 
@@ -139,9 +136,8 @@ export default function AuthPage({ darkMode, onLogin }) {
         initial={{ opacity: 0, x: -80 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
-        className={`hidden md:flex flex-col justify-center items-start px-16 w-1/2 relative overflow-hidden ${
-          darkMode ? "bg-indigo-700" : "bg-indigo-600"
-        } text-white`}
+        className={`hidden md:flex flex-col justify-center items-start px-16 w-1/2 relative overflow-hidden ${darkMode ? "bg-indigo-700" : "bg-indigo-600"
+          } text-white`}
       >
         <motion.div
           animate={{ y: [0, -15, 0] }}
@@ -185,11 +181,10 @@ export default function AuthPage({ darkMode, onLogin }) {
               onClick={() => setActiveForm(type)}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className={`px-5 py-2 rounded-xl font-semibold transition ${
-                activeForm === type
+              className={`px-5 py-2 rounded-xl font-semibold transition ${activeForm === type
                   ? "bg-white text-indigo-600"
                   : "bg-white/30 text-white hover:bg-white/50"
-              }`}
+                }`}
             >
               {type === "login" ? "Login" : "Sign Up"}
             </motion.button>
@@ -206,9 +201,8 @@ export default function AuthPage({ darkMode, onLogin }) {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -50 }}
             transition={{ duration: 0.5 }}
-            className={`w-full max-w-md rounded-2xl p-8 shadow-xl border ${
-              darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-slate-200"
-            }`}
+            className={`w-full max-w-md rounded-2xl p-8 shadow-xl border ${darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-slate-200"
+              }`}
           >
             <h2 className="text-2xl font-bold mb-6">
               {activeForm === "login" ? "Login" : "Sign Up"}
@@ -293,11 +287,10 @@ export default function AuthPage({ darkMode, onLogin }) {
                   onClick={() => setActiveForm(type)}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className={`px-4 py-2 rounded-xl font-semibold transition ${
-                    activeForm === type
+                  className={`px-4 py-2 rounded-xl font-semibold transition ${activeForm === type
                       ? "bg-indigo-600 text-white"
                       : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                  }`}
+                    }`}
                 >
                   {type === "login" ? "Login" : "Sign Up"}
                 </motion.button>

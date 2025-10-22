@@ -1,7 +1,7 @@
 // src/config/api.js
 import axios from "axios";
 
-const API_BASE = import.meta.env.VITE_API_URL || "https://protodobackend-production.up.railway.app/api";
+const API_BASE = import.meta.env.VITE_API_URL || "https://nondecasyllabic-nonfraudulently-mirna.ngrok-free.dev/api";
 
 const API = axios.create({
   baseURL: API_BASE,
