@@ -149,8 +149,4 @@ h1 {
 /* header */
 @media (max-width: 360px) {
   .xs\:inline { display: none; }
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 521bc8925f0f945601d65c457bca3f25eff220f1
