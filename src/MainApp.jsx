@@ -129,8 +129,8 @@ export default function MainApp({ initialUser, token, onLogout }) {
       typeof boardName === "string"
         ? boardName.trim()
         : typeof boardName?.name === "string"
-        ? boardName.name.trim()
-        : "";
+          ? boardName.name.trim()
+          : "";
 
     if (!name) return toast.error("Please enter a valid board name");
 
@@ -232,12 +232,12 @@ export default function MainApp({ initialUser, token, onLogout }) {
         prev.map((b) =>
           b._id === activeBoardId
             ? {
-                ...b,
-                lists: {
-                  ...b.lists,
-                  [columnId]: [...(b.lists[columnId] || []), res.data],
-                },
-              }
+              ...b,
+              lists: {
+                ...b.lists,
+                [columnId]: [...(b.lists[columnId] || []), res.data],
+              },
+            }
             : b
         )
       );
@@ -267,14 +267,14 @@ export default function MainApp({ initialUser, token, onLogout }) {
         prev.map((b) =>
           b._id === activeBoardId
             ? {
-                ...b,
-                lists: {
-                  ...b.lists,
-                  [modalColumn]: b.lists[modalColumn].map((t) =>
-                    t._id === taskId ? res.data : t
-                  ),
-                },
-              }
+              ...b,
+              lists: {
+                ...b.lists,
+                [modalColumn]: b.lists[modalColumn].map((t) =>
+                  t._id === taskId ? res.data : t
+                ),
+              },
+            }
             : b
         )
       );
@@ -328,13 +328,13 @@ export default function MainApp({ initialUser, token, onLogout }) {
       prev.map((b) =>
         b._id === activeBoardId
           ? {
-              ...b,
-              lists: {
-                ...b.lists,
-                [source.droppableId]: startList,
-                [destination.droppableId]: endList,
-              },
-            }
+            ...b,
+            lists: {
+              ...b.lists,
+              [source.droppableId]: startList,
+              [destination.droppableId]: endList,
+            },
+          }
           : b
       )
     );
@@ -358,9 +358,8 @@ export default function MainApp({ initialUser, token, onLogout }) {
   if (loading)
     return (
       <div
-        className={`h-screen flex items-center justify-center overflow-hidden ${
-          dark ? "bg-gray-900" : "bg-sky-50"
-        }`}
+        className={`h-screen flex items-center justify-center overflow-hidden ${dark ? "bg-gray-900" : "bg-sky-50"
+          }`}
       >
         <div className="flex text-4xl md:text-6xl font-bold select-none">
           <span
@@ -381,55 +380,68 @@ export default function MainApp({ initialUser, token, onLogout }) {
 
   return (
     <div
-      className={`min-h-screen flex flex-col ${
-        dark ? "bg-gray-900 text-gray-200" : "bg-sky-50 text-gray-800"
-      }`}
+      className={`min-h-screen flex flex-col ${dark ? "bg-gray-900 text-gray-200" : "bg-sky-50 text-gray-800"
+        }`}
     >
       <Toaster position="top-center" />
 
       {/* HEADER */}
       <header
-        className={`h-14 px-6 flex items-center justify-between ${
-          dark ? "bg-gray-900 border-gray-800" : "bg-white border-b border-sky-100"
-        }`}
+        className={`h-14 px-4 md:px-6 flex items-center justify-between border-b transition-colors duration-300 ${dark
+            ? "bg-gray-900 text-gray-100 border-gray-700"
+            : "bg-white text-gray-800 border-slate-200"
+          }`}
       >
-        <div className="flex items-center gap-4">
+        {/* ---------- LEFT SECTION ---------- */}
+        <div className="flex items-center gap-3">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 rounded-full hover:bg-sky-100 dark:hover:bg-gray-700"
+            className="p-2 rounded-full transition-all duration-200 hover:bg-sky-100 dark:hover:bg-gray-700"
           >
-            {sidebarOpen ? <FiChevronLeft /> : <FiChevronRight />}
+            {sidebarOpen ? <FiChevronLeft size={20} /> : <FiChevronRight size={20} />}
           </button>
 
+          {/* PC pe full name, mobile pe only 'P' */}
           <span className="text-lg font-bold bg-gradient-to-r from-sky-500 to-indigo-500 bg-clip-text text-transparent">
-            Pro-Todo
+            <span className="hidden sm:inline">ProTodo</span>
+            <span className="sm:hidden">ProTodo</span>
           </span>
 
+          {/* Archive button — only visible on desktop */}
           <button
             onClick={() => setShowArchive(true)}
-            className={`px-3 py-1 rounded-lg text-sm flex items-center ${
-              dark ? "bg-gray-800" : "bg-sky-100"
-            }`}
+            className={`px-3 py-1 rounded-lg text-sm items-center hidden md:flex transition-colors duration-200 ${dark
+                ? "bg-gray-800 text-gray-200 hover:bg-gray-700"
+                : "bg-sky-100 text-gray-800 hover:bg-sky-200"
+              }`}
           >
             <FiArchive className="mr-1" /> Archive ({archivedBoards.length})
           </button>
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* ---------- RIGHT SECTION ---------- */}
+        <div className="flex items-center gap-2">
+          {/* 🌙 Theme Toggle */}
           <button
             onClick={() => setDark(!dark)}
-            className="p-2 rounded-full hover:bg-sky-100 dark:hover:bg-gray-700"
+            className={`p-2 rounded-full transition-all duration-200 transform hover:scale-110 ${dark
+                ? "text-yellow-400 hover:text-yellow-300 hover:bg-gray-800"
+                : "text-sky-500 hover:text-sky-600 hover:bg-sky-100"
+              }`}
+            title={dark ? "Switch to Light Mode" : "Switch to Dark Mode"}
           >
-            {dark ? <FiSun /> : <FiMoon />}
+            {dark ? <FiSun size={20} /> : <FiMoon size={20} />}
           </button>
 
+          {/* Profile menu (with archive option for mobile) */}
           <ProfileMenu
-  user={user}
-  setUser={setUser}   // ✅ this function now exists
-  onLogout={onLogout}
-  darkMode={dark}
-/>
-
+            user={user}
+            setUser={setUser}
+            onLogout={onLogout}
+            darkMode={dark}
+            archivedCount={archivedBoards.length}
+            onShowArchive={() => setShowArchive(true)}
+          />
         </div>
       </header>
 

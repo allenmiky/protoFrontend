@@ -143,3 +143,10 @@ h1 {
     scrollbar-color: theme("colors.slate.300") transparent;
   }
 }
+
+
+/* media width */
+/* header */
+@media (max-width: 360px) {
+  .xs\:inline { display: none; }
+}
