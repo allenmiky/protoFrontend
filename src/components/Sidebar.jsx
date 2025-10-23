@@ -22,27 +22,27 @@ export default function Sidebar({
 
   return (
     <>
-<aside
-  className={`${
-    darkMode
-      ? "bg-gray-900 text-gray-100 border-gray-700"
-      : "bg-white text-gray-800 border-slate-200"
-  } w-64 border-r flex flex-col transition-colors duration-300 h-screen sticky top-0 overflow-y-auto`}
->
-
+      <aside
+        className={`${
+          darkMode
+            ? "bg-gray-900 text-gray-100 border-gray-700"
+            : "bg-white text-gray-800 border-slate-200"
+        } w-64 border-r flex flex-col transition-colors duration-300 h-screen sticky top-0 overflow-y-auto`}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-3 border-b border-gray-700/20">
           <h2 className="font-bold text-lg">Boards</h2>
           <button
-  onClick={() => addBoard()}  // ✅ just trigger the modal
-  className={`p-1.5 rounded transition-colors duration-200 ${
-    darkMode
-      ? "bg-indigo-600 hover:bg-indigo-500 text-white"
-      : "bg-indigo-500 hover:bg-indigo-600 text-white shadow-sm"
-  }`}
-  title="Add new board"
->
-  <FiPlus />
-</button>
-
+            onClick={() => setShowAddBoardModal(true)} // ✅ open modal correctly
+            className={`p-1.5 rounded transition-colors duration-200 ${
+              darkMode
+                ? "bg-indigo-600 hover:bg-indigo-500 text-white"
+                : "bg-indigo-500 hover:bg-indigo-600 text-white shadow-sm"
+            }`}
+            title="Add new board"
+          >
+            <FiPlus />
+          </button>
         </div>
 
         {/* Boards List */}
@@ -73,23 +73,22 @@ export default function Sidebar({
                   }}
                   className={`p-1 rounded transition-colors duration-200 ${
                     darkMode
-                      ? "bg-gray-700 text-[#fff]"
+                      ? "bg-gray-700 text-white"
                       : "bg-slate-200 text-gray-600"
                   }`}
                 >
                   <FiMoreVertical />
                 </button>
 
-{menuOpen === board._id && (
-  <SidebarMenu
-    board={board}
-    darkMode={darkMode}
-    onArchive={onArchive}
-    onDelete={onDelete}
-    onClose={() => setMenuOpen(null)}
-  />
-)}
-
+                {menuOpen === board._id && (
+                  <SidebarMenu
+                    board={board}
+                    darkMode={darkMode}
+                    onArchive={onArchive}
+                    onDelete={onDelete}
+                    onClose={() => setMenuOpen(null)}
+                  />
+                )}
               </div>
             </div>
           ))}
