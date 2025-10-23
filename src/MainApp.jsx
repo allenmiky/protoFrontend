@@ -146,8 +146,12 @@ export default function MainApp({ initialUser, token, onLogout }) {
         lists: { todo: [], inprogress: [], done: [] },
       };
 
-      setBoards((prev) => [...prev, boardWithLists]);
-      setActiveBoardId(res.data._id);
+      setBoards(prev => {
+  const newBoards = [...prev, boardWithLists];
+  setActiveBoardId(res.data._id);
+  return newBoards;
+});
+
       toast.success("Board added successfully!");
     } catch (err) {
       console.error("Add Board Error:", err);
@@ -388,8 +392,8 @@ export default function MainApp({ initialUser, token, onLogout }) {
       {/* HEADER */}
       <header
         className={`h-14 px-4 md:px-6 flex items-center justify-between border-b transition-colors duration-300 ${dark
-            ? "bg-gray-900 text-gray-100 border-gray-700"
-            : "bg-white text-gray-800 border-slate-200"
+          ? "bg-gray-900 text-gray-100 border-gray-700"
+          : "bg-white text-gray-800 border-slate-200"
           }`}
       >
         {/* ---------- LEFT SECTION ---------- */}
@@ -411,8 +415,8 @@ export default function MainApp({ initialUser, token, onLogout }) {
           <button
             onClick={() => setShowArchive(true)}
             className={`px-3 py-1 rounded-lg text-sm items-center hidden md:flex transition-colors duration-200 ${dark
-                ? "bg-gray-800 text-gray-200 hover:bg-gray-700"
-                : "bg-sky-100 text-gray-800 hover:bg-sky-200"
+              ? "bg-gray-800 text-gray-200 hover:bg-gray-700"
+              : "bg-sky-100 text-gray-800 hover:bg-sky-200"
               }`}
           >
             <FiArchive className="mr-1" /> Archive ({archivedBoards.length})
@@ -425,8 +429,8 @@ export default function MainApp({ initialUser, token, onLogout }) {
           <button
             onClick={() => setDark(!dark)}
             className={`p-2 rounded-full transition-all duration-200 transform hover:scale-110 ${dark
-                ? "text-yellow-400 hover:text-yellow-300 hover:bg-gray-800"
-                : "text-sky-500 hover:text-sky-600 hover:bg-sky-100"
+              ? "text-yellow-400 hover:text-yellow-300 hover:bg-gray-800"
+              : "text-sky-500 hover:text-sky-600 hover:bg-sky-100"
               }`}
             title={dark ? "Switch to Light Mode" : "Switch to Dark Mode"}
           >
