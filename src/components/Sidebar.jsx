@@ -30,19 +30,24 @@ export default function Sidebar({
         } w-64 border-r flex flex-col transition-colors duration-300 h-screen sticky top-0 overflow-y-auto`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-3 border-b border-gray-700/20">
+        <div
+          className={`flex items-center justify-between p-4 border-b ${
+            darkMode ? "border-gray-700" : "border-slate-200"
+          }`}
+        >
           <h2 className="font-bold text-lg">Boards</h2>
           <button
-            onClick={() => setShowAddBoardModal(true)} // ✅ open modal correctly
-            className={`p-1.5 rounded transition-colors duration-200 ${
-              darkMode
-                ? "bg-indigo-600 hover:bg-indigo-500 text-white"
-                : "bg-indigo-500 hover:bg-indigo-600 text-white shadow-sm"
-            }`}
-            title="Add new board"
-          >
-            <FiPlus />
-          </button>
+  onClick={() => addBoard()}  // ✅ just trigger the modal
+  className={`p-1.5 rounded transition-colors duration-200 ${
+    darkMode
+      ? "bg-indigo-600 hover:bg-indigo-500 text-white"
+      : "bg-indigo-500 hover:bg-indigo-600 text-white shadow-sm"
+  }`}
+  title="Add new board"
+>
+  <FiPlus />
+</button>
+
         </div>
 
         {/* Boards List */}
@@ -73,7 +78,7 @@ export default function Sidebar({
                   }}
                   className={`p-1 rounded transition-colors duration-200 ${
                     darkMode
-                      ? "bg-gray-700 text-white"
+                      ? "bg-gray-700 text-[#fff]"
                       : "bg-slate-200 text-gray-600"
                   }`}
                 >
@@ -81,13 +86,41 @@ export default function Sidebar({
                 </button>
 
                 {menuOpen === board._id && (
-                  <SidebarMenu
-                    board={board}
-                    darkMode={darkMode}
-                    onArchive={onArchive}
-                    onDelete={onDelete}
-                    onClose={() => setMenuOpen(null)}
-                  />
+                  <div
+                    className={`absolute right-0 mt-1 w-36 rounded-lg shadow-lg border z-10 overflow-hidden transition-all duration-200 ${
+                      darkMode
+                        ? "bg-gray-800 border-gray-700"
+                        : "bg-white border-slate-200"
+                    }`}
+                  >
+                    <button
+                      onClick={() => {
+                        onArchive && onArchive(board);
+                        setMenuOpen(null);
+                      }}
+                      className={`flex items-center gap-2 w-full text-left px-3 py-2 text-sm transition-colors duration-150 ${
+                        darkMode
+                          ? "hover:bg-gray-700"
+                          : "hover:bg-slate-100 text-gray-700"
+                      }`}
+                    >
+                      <FiArchive /> Archive
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        onDelete && onDelete(board);
+                        setMenuOpen(null);
+                      }}
+                      className={`flex items-center gap-2 w-full text-left px-3 py-2 text-sm transition-colors duration-150 ${
+                        darkMode
+                          ? "text-rose-400 hover:bg-gray-700"
+                          : "text-rose-500 hover:bg-slate-100"
+                      }`}
+                    >
+                      <FiTrash2 /> Delete
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
