@@ -1,7 +1,7 @@
-import React, { useState } from "react";
-import { FiPlus, FiMoreVertical } from "react-icons/fi";
+import React, { useState, useRef } from "react";
+import { FiPlus, FiMoreVertical, FiArchive, FiTrash2 } from "react-icons/fi";
 import AddBoardModal from "./AddBoardModal";
-import SidebarMenu from "./SidebarMenu"; // ✅ imported new menu component
+import useOutsideClick from "../hooks/useOutsideClick";
 
 export default function Sidebar({
   boards = [],
@@ -128,7 +128,7 @@ export default function Sidebar({
         </div>
       </aside>
 
-      {/* 🔹 Add Board Modal */}
+      {/* Add Board Modal */}
       <AddBoardModal
         isOpen={showAddBoardModal}
         onClose={() => setShowAddBoardModal(false)}
