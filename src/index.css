@@ -165,6 +165,17 @@ h1 {
     scrollbar-color: theme("colors.slate.300") transparent;
   }
 }
+/* 🌿 Sleek Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background-color: rgba(120, 120, 120, 0.4);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(120, 120, 120, 0.6);
+}
 
 
 /* media width */

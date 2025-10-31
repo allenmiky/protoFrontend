@@ -1,7 +1,7 @@
-import React, { useState } from "react";
-import { FiPlus, FiMoreVertical } from "react-icons/fi";
+import React, { useState, useRef } from "react";
+import { FiPlus, FiMoreVertical, FiArchive, FiTrash2 } from "react-icons/fi";
 import AddBoardModal from "./AddBoardModal";
-import SidebarMenu from "./SidebarMenu"; // ✅ imported new menu component
+import useOutsideClick from "../hooks/useOutsideClick";
 
 export default function Sidebar({
   boards = [],
@@ -26,7 +26,11 @@ export default function Sidebar({
         className={`${darkMode
             ? "bg-gray-900 text-gray-100 border-gray-700"
             : "bg-white text-gray-800 border-slate-200"
+<<<<<<< HEAD
           } w-64 border-r flex flex-col transition-colors duration-300`}
+=======
+        } w-64 border-r flex flex-col transition-colors duration-300 h-screen sticky top-0 overflow-y-auto`}
+>>>>>>> f58b71e3ff5f424d25b2ee25d6c6bd360daa8e84
       >
         {/* Header */}
         <div
@@ -81,6 +85,7 @@ export default function Sidebar({
                 </button>
 
                 {menuOpen === board._id && (
+<<<<<<< HEAD
                   <SidebarMenu
                     board={board}
                     darkMode={darkMode}
@@ -89,14 +94,51 @@ export default function Sidebar({
                     onClose={() => setMenuOpen(null)}
                   />
                 )}
+=======
+                  <div
+                    className={`absolute right-0 mt-1 w-36 rounded-lg shadow-lg border z-10 overflow-hidden transition-all duration-200 ${
+                      darkMode
+                        ? "bg-gray-800 border-gray-700"
+                        : "bg-white border-slate-200"
+                    }`}
+                  >
+                    <button
+                      onClick={() => {
+                        onArchive && onArchive(board);
+                        setMenuOpen(null);
+                      }}
+                      className={`flex items-center gap-2 w-full text-left px-3 py-2 text-sm transition-colors duration-150 ${
+                        darkMode
+                          ? "hover:bg-gray-700"
+                          : "hover:bg-slate-100 text-gray-700"
+                      }`}
+                    >
+                      <FiArchive /> Archive
+                    </button>
+>>>>>>> f58b71e3ff5f424d25b2ee25d6c6bd360daa8e84
 
+                    <button
+                      onClick={() => {
+                        onDelete && onDelete(board);
+                        setMenuOpen(null);
+                      }}
+                      className={`flex items-center gap-2 w-full text-left px-3 py-2 text-sm transition-colors duration-150 ${
+                        darkMode
+                          ? "text-rose-400 hover:bg-gray-700"
+                          : "text-rose-500 hover:bg-slate-100"
+                      }`}
+                    >
+                      <FiTrash2 /> Delete
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))}
         </div>
       </aside>
 
-      {/* 🔹 Add Board Modal */}
+      {/* Add Board Modal */}
       <AddBoardModal
         isOpen={showAddBoardModal}
         onClose={() => setShowAddBoardModal(false)}
