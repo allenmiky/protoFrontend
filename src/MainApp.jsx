@@ -4,7 +4,8 @@ import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { Toaster, toast } from "react-hot-toast";
 import axios from "axios";
 import { FiCalendar, FiChevronLeft, FiChevronRight, FiArchive, FiSun, FiMoon, FiPlus, FiTrash2 } from "react-icons/fi";
-import { FaClipboardList, FaCog, FaCheckCircle } from "react-icons/fa";
+import { FaClipboardList, FaCog, FaCheckCircle, FaEye, FaPause, FaBug, FaClock } from "react-icons/fa";
+import { motion, AnimatePresence } from "framer-motion";
 
 import API_BASE from "./config/api";
 import ArchiveDrawer from "./components/ArchiveDrawer";
@@ -14,12 +15,18 @@ import ProfileMenu from "./components/ProfileMenu";
 import AddTaskModal from "./components/AddTaskModal";
 import AddBoardModal from "./components/AddBoardModal";
 import TaskDescription from "./components/TaskDescription";
+import TaskCardMenu from "./components/TaskCardMenu";
+import ArchiveCard from "./components/ArchiveCard";
 
 const ICONS = {
   todo: <FaClipboardList className="text-blue-500 text-xl" />,
   inprogress: <FaCog className="text-yellow-500 text-xl animate-spin-slow" />,
   done: <FaCheckCircle className="text-green-500 text-xl" />,
+  review: <FaEye className="text-purple-500 text-xl" />,
+  blocked: <FaPause className="text-red-500 text-xl" />,
+  qa: <FaBug className="text-orange-500 text-xl" />,
 };
+
 
 // ✅ MainApp Component
 export default function MainApp({ initialUser, token, onLogout }) {
@@ -48,7 +55,17 @@ export default function MainApp({ initialUser, token, onLogout }) {
   const [editTask, setEditTask] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [boardToDelete, setBoardToDelete] = useState(null);
+  const [archivedCards, setArchivedCards] = useState({});
+  const [showArchivedCards, setShowArchivedCards] = useState(false);
 
+
+  // ✅ Overdue check function
+  const isOverdue = (taskDate, completed) => {
+    if (!taskDate || completed) return false;
+    const today = new Date();
+    const dueDate = new Date(taskDate);
+    return dueDate < today;
+  };
 
   // ✅ Dark mode toggle
   useEffect(() => {
@@ -101,15 +118,21 @@ export default function MainApp({ initialUser, token, onLogout }) {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        const grouped = res.data.reduce(
-          (acc, task) => {
-            const col = task.status || "todo";
-            if (!acc[col]) acc[col] = [];
-            acc[col].push(task);
-            return acc;
-          },
-          { todo: [], inprogress: [], done: [] }
-        );
+        console.log("Fetched tasks:", res.data); // ✅ yeh line add karo
+
+        const grouped = res.data.reduce((acc, task) => {
+          const col = task.status || "todo";
+          if (!acc[col]) acc[col] = [];
+          acc[col].push({
+            ...task,
+            subtasks: (task.subtasks || []).map(st => ({
+              id: st._id,
+              title: st.title,
+              done: st.completed || false,
+            })),
+          });
+          return acc;
+        }, { todo: [], inprogress: [], done: [] });
 
         setBoards((prev) =>
           prev.map((b) =>
@@ -147,10 +170,10 @@ export default function MainApp({ initialUser, token, onLogout }) {
       };
 
       setBoards(prev => {
-  const newBoards = [...prev, boardWithLists];
-  setActiveBoardId(res.data._id);
-  return newBoards;
-});
+        const newBoards = [...prev, boardWithLists];
+        setActiveBoardId(res.data._id);
+        return newBoards;
+      });
 
       toast.success("Board added successfully!");
     } catch (err) {
@@ -229,9 +252,11 @@ export default function MainApp({ initialUser, token, onLogout }) {
           date: task.date,
           status: columnId,
           board: activeBoardId,
+          subtasks: task.subtasks || [],
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
       setBoards((prev) =>
         prev.map((b) =>
           b._id === activeBoardId
@@ -239,38 +264,84 @@ export default function MainApp({ initialUser, token, onLogout }) {
               ...b,
               lists: {
                 ...b.lists,
-                [columnId]: [...(b.lists[columnId] || []), res.data],
+                [columnId]: [
+                  ...(b.lists[columnId] || []),
+                  {
+                    ...res.data,
+                    subtasks: (res.data.subtasks || []).map((st) => ({
+                      id: st._id,
+                      title: st.title,
+                      done: st.completed || false,
+                    })),
+                  },
+                ],
               },
             }
             : b
         )
       );
+
+      console.log("✅ Saved task from backend:", res.data);
       toast.success("Task added successfully!");
-    } catch {
+    } catch (error) {
+      console.log(error);
       toast.error("Failed to add task");
     }
   };
 
-  const updateTask = async (updatedTask) => {
-    if (!token) return toast.error("Login required");
-    try {
-      const taskId = updatedTask._id || updatedTask.id;
-      const res = await axios.put(
-        `${API_BASE}/tasks/${taskId}`,
-        {
-          title: updatedTask.title,
-          description: updatedTask.desc || updatedTask.description,
-          date: updatedTask.date,
-          status: modalColumn,
-          board: activeBoardId,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
 
-      setBoards((prev) =>
-        prev.map((b) =>
-          b._id === activeBoardId
-            ? {
+  const handleCompleteTask = (task) => {
+    if (!task?._id) return console.error("Task has no _id:", task);
+
+    const now = new Date();
+    const isCompleted = !task.completed;
+
+    const updatedTask = {
+      ...task,
+      completed: !task.completed,
+      history: [
+        ...(task.history || []),
+        `${!task.completed ? "✅ Completed" : "↩️ Marked incomplete"} on ${new Date().toLocaleString()}`
+      ],
+    };
+
+
+    updateTask(updatedTask); // ✅ ONLY pass updatedTask
+  };
+
+
+  // ✅ MainApp.jsx - updateTask function
+const updateTask = async (updatedTask) => {
+  if (!token) return toast.error("Login required");
+  try {
+    const taskId = updatedTask._id || updatedTask.id;
+
+    // Prepare payload with subtasks
+    const payload = {
+      title: updatedTask.title,
+      description: updatedTask.desc || updatedTask.description,
+      date: updatedTask.date,
+      status: modalColumn,
+      board: activeBoardId,
+      completed: updatedTask.completed || false,
+      subtasks: (updatedTask.subtasks || []).map(st => ({
+        _id: st._id,
+        title: st.title,
+        status: st.status || modalColumn,
+        completed: st.completed || false,
+      })),
+    };
+
+    const res = await axios.put(
+      `${API_BASE}/tasks/${taskId}`,
+      payload,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    setBoards((prev) =>
+      prev.map((b) =>
+        b._id === activeBoardId
+          ? {
               ...b,
               lists: {
                 ...b.lists,
@@ -279,14 +350,46 @@ export default function MainApp({ initialUser, token, onLogout }) {
                 ),
               },
             }
-            : b
-        )
-      );
-      toast.success("Task updated successfully!");
-      setEditTask(null);
-    } catch {
-      toast.error("Error updating task");
-    }
+          : b
+      )
+    );
+
+    toast.success("Task updated successfully!");
+    setEditTask(null);
+  } catch (err) {
+    console.error("Error updating task:", err);
+    toast.error("Error updating task");
+  }
+};
+
+
+  // ✅ Archive Task function
+  const handleArchiveTask = (task) => {
+    if (!task) return;
+
+    // 1️⃣ Remove from board lists
+    setBoards(prev =>
+      prev.map(b => {
+        if (b._id !== activeBoardId) return b;
+
+        const newLists = Object.fromEntries(
+          Object.entries(b.lists).map(([col, arr]) => [
+            col,
+            arr.filter(t => t._id !== task._id)
+          ])
+        );
+
+        return { ...b, lists: newLists };
+      })
+    );
+
+    // 2️⃣ Add to archivedCards for this board
+    setArchivedCards(prev => ({
+      ...prev,
+      [activeBoardId]: [...(prev[activeBoardId] || []), task]
+    }));
+
+    toast.success("Task archived!");
   };
 
   const deleteTask = async (taskId) => {
@@ -396,7 +499,7 @@ export default function MainApp({ initialUser, token, onLogout }) {
           : "bg-white text-gray-800 border-slate-200"
           }`}
       >
-        {/* ---------- LEFT SECTION ---------- */}
+        {/* LEFT */}
         <div className="flex items-center gap-3">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -405,13 +508,11 @@ export default function MainApp({ initialUser, token, onLogout }) {
             {sidebarOpen ? <FiChevronLeft size={20} /> : <FiChevronRight size={20} />}
           </button>
 
-          {/* PC pe full name, mobile pe only 'P' */}
           <span className="text-lg font-bold bg-gradient-to-r from-sky-500 to-indigo-500 bg-clip-text text-transparent">
             <span className="hidden sm:inline">ProTodo</span>
             <span className="sm:hidden">ProTodo</span>
           </span>
 
-          {/* Archive button — only visible on desktop */}
           <button
             onClick={() => setShowArchive(true)}
             className={`px-3 py-1 rounded-lg text-sm items-center hidden md:flex transition-colors duration-200 ${dark
@@ -423,9 +524,9 @@ export default function MainApp({ initialUser, token, onLogout }) {
           </button>
         </div>
 
-        {/* ---------- RIGHT SECTION ---------- */}
+        {/* RIGHT */}
         <div className="flex items-center gap-2">
-          {/* 🌙 Theme Toggle */}
+          {/* Theme Toggle */}
           <button
             onClick={() => setDark(!dark)}
             className={`p-2 rounded-full transition-all duration-200 transform hover:scale-110 ${dark
@@ -437,7 +538,6 @@ export default function MainApp({ initialUser, token, onLogout }) {
             {dark ? <FiSun size={20} /> : <FiMoon size={20} />}
           </button>
 
-          {/* Profile menu (with archive option for mobile) */}
           <ProfileMenu
             user={user}
             setUser={setUser}
@@ -463,12 +563,43 @@ export default function MainApp({ initialUser, token, onLogout }) {
           />
         )}
 
-        {/* ✅ Main Board */}
+        {/* MAIN */}
         <main className="flex-1 p-6 overflow-auto">
           {activeBoardId && (
-            <h1 className="text-3xl font-bold mb-6">{activeBoard.name}</h1>
-          )}
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-3xl font-bold">{activeBoard.name}</h1>
 
+              <div className="flex items-center gap-2 mb-6">
+                {/* Card Archive */}
+                <button
+                  onClick={() => setShowArchivedCards(true)}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 shadow-md bg-gray-200 dark:bg-gray-700 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
+                >
+                  <FiArchive className="text-lg" /> Card Archive
+                </button>
+
+                {showArchivedCards && (
+                  <ArchiveCard
+                    archivedCards={archivedCards[activeBoardId] || []} // ✅ safe access
+                    onClose={() => setShowArchivedCards(false)}
+                    darkMode={dark}
+                  />
+                )}
+
+                {/* Add Task */}
+                <button
+                  onClick={() => {
+                    setEditTask(null);
+                    setModalColumn("todo");
+                    setShowModal(true);
+                  }}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 shadow-md bg-indigo-600 text-white hover:bg-indigo-500"
+                >
+                  <FiPlus className="text-lg" /> Add Task
+                </button>
+              </div>
+            </div>
+          )}
 
           <AddTaskModal
             isOpen={showModal}
@@ -478,6 +609,7 @@ export default function MainApp({ initialUser, token, onLogout }) {
             column={modalColumn}
             task={editTask}
             darkMode={dark}
+            boardId={activeBoardId} // ✅ must pass
           />
 
           <AddBoardModal
@@ -490,7 +622,7 @@ export default function MainApp({ initialUser, token, onLogout }) {
             darkMode={dark}
           />
 
-          {/* ✅ Inline No Board State */}
+          {/* No Board Found */}
           {boards.length === 0 && (
             <div className="flex flex-col items-center justify-center h-64 text-center mb-8">
               <h2
@@ -517,94 +649,109 @@ export default function MainApp({ initialUser, token, onLogout }) {
             </div>
           )}
 
-          {/* ✅ Task Columns */}
+          {/* Task Columns */}
           {boards.length > 0 && (
             <div className="max-w-7xl mx-auto grid md:grid-cols-3 gap-5">
               <DragDropContext onDragEnd={onDragEnd}>
                 {Object.entries(activeBoard.lists ?? {}).map(([colId, tasks = []]) => (
-
                   <Droppable key={colId} droppableId={colId}>
                     {(provided) => (
                       <div
                         {...provided.droppableProps}
                         ref={provided.innerRef}
-                        className={`rounded-2xl p-4 shadow-md transition-all ${dark ? "bg-gray-800" : "bg-white"
-                          }`}
+                        className={`rounded-2xl p-4 shadow-md transition-all ${dark ? "bg-gray-800" : "bg-white"}`}
                       >
                         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                          {ICONS[colId]}{" "}
-                          {colId === "todo"
-                            ? "To Do"
-                            : colId === "inprogress"
-                              ? "In Progress"
-                              : "Done"}{" "}
-                          <span className="ml-auto text-sm text-gray-500">
-                            ({tasks.length})
+                          {ICONS[colId] || <FaClipboardList className="text-gray-500 text-xl" />}
+                          <span className="capitalize">
+                            {colId === "todo"
+                              ? "To Do"
+                              : colId === "inprogress"
+                                ? "In Progress"
+                                : colId === "done"
+                                  ? "Done"
+                                  : colId}
                           </span>
+                          <span className="ml-auto text-sm text-gray-500">({tasks.length})</span>
                         </h2>
 
                         {tasks.map((task, index) => (
                           <Draggable key={task._id} draggableId={task._id} index={index}>
-                            {(p) => (
+                            {(provided, snapshot) => (
                               <div
-                                {...p.draggableProps}
-                                {...p.dragHandleProps}
-                                ref={p.innerRef}
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className={`relative group mb-3 p-4 rounded-xl border shadow-sm cursor-pointer transition-all overflow-hidden
+                        ${task.completed ? (dark ? "bg-green-700/30 border-green-500" : "bg-green-100 border-green-400") : (dark ? "bg-gray-700 border-gray-600 text-gray-100" : "bg-white border-gray-200 text-gray-900")}
+                        ${snapshot.isDragging ? "shadow-lg scale-105 z-10" : ""}
+                      `}
                                 onClick={() => {
                                   setEditTask(task);
                                   setModalColumn(colId);
                                   setShowModal(true);
                                 }}
-                                className={`mb-3 p-4 rounded-xl border shadow-sm cursor-pointer transition-all hover:shadow-lg overflow-hidden ${dark
-                                  ? "bg-gray-700 border-gray-600 text-gray-100"
-                                  : "bg-white border-gray-200 text-gray-900"
-                                  }`}
                               >
-                                <div className="flex justify-between items-start mb-1">
-                                  <h3 className="font-semibold text-base">{task.title}</h3>
+                                {/* Task Menu */}
+                                <div className="absolute top-2 right-2">
+                                  <TaskCardMenu
+                                    taskId={task._id}
+                                    onDelete={() => deleteTask(task._id)}
+                                    onArchive={() => handleArchiveTask(task)} // pass full task
+                                    onPin={() => handlePinTask(task._id)}
+                                  />
+                                </div>
+
+                                {/* Title + Overdue */}
+                                <h3 className="font-semibold text-base flex items-center gap-2 mb-1">
+                                  {task.title}
+                                  {!task.completed && task.date && new Date(task.date) < new Date() && (
+                                    <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-rose-100 text-rose-600">
+                                      Overdue
+                                    </span>
+                                  )}
+                                </h3>
+
+                                {/* Description */}
+                                {(task.description || task.desc) && (
+                                  <TaskDescription desc={task.description || task.desc} />
+                                )}
+
+                                {/* Bottom row: priority + date */}
+                                <div className="flex items-center justify-between mt-3">
+                                  {task.priority && (
+                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${priorityClasses(task.priority)}`}>
+                                      {task.priority}
+                                    </span>
+                                  )}
+                                  {task.date && (
+                                    <div className="flex items-center gap-1 text-[11px] text-green-500">
+                                      <FiCalendar className="text-xs" />
+                                      <span>{new Date(task.date).toLocaleDateString()}</span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Complete checkbox */}
+                                <div className="absolute bottom-2 right-2">
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      deleteTask(task._id);
+                                      handleCompleteTask(task);
                                     }}
-                                    className="p-1 rounded-full hover:bg-rose-500/20 text-rose-500"
+                                    className={`w-6 h-6 rounded-full border flex items-center justify-center transition-all duration-300 
+                            ${task.completed ? "bg-green-500 border-green-600 opacity-100" : "bg-white dark:bg-gray-800 border-gray-400 dark:border-gray-500 opacity-0 group-hover:opacity-100"}
+                          `}
                                   >
-                                    <FiTrash2 />
+                                    {task.completed && <span className="text-white text-sm font-bold">✓</span>}
                                   </button>
                                 </div>
-
-                                {task.description && (
-                                  <TaskDescription desc={task.description} />
-                                )}
-
-                                {task.date && (
-                                  <div className="flex items-center gap-1 mt-1">
-                                    <FiCalendar className="text-green-500 text-xs" />
-                                    <span className="text-[11px] text-green-500">
-                                      {new Date(task.date).toLocaleDateString()}
-                                    </span>
-                                  </div>
-                                )}
                               </div>
                             )}
                           </Draggable>
                         ))}
 
                         {provided.placeholder}
-
-                        <button
-                          onClick={() => {
-                            setEditTask(null);
-                            setModalColumn(colId);
-                            setShowModal(true);
-                          }}
-                          className={`mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-xl font-semibold shadow-sm transition-all ${dark
-                            ? "bg-[#4F46E5] hover:bg-[#6366F1] text-white"
-                            : "bg-[#4F46E5] hover:bg-[#6366F1] text-white"
-                            }`}
-                        >
-                          <FiPlus className="text-lg" /> Add Task
-                        </button>
                       </div>
                     )}
                   </Droppable>
@@ -613,7 +760,7 @@ export default function MainApp({ initialUser, token, onLogout }) {
             </div>
           )}
 
-          {/* ✅ Archive Drawer */}
+
           {showArchive && (
             <ArchiveDrawer
               boards={archivedBoards}
@@ -624,7 +771,6 @@ export default function MainApp({ initialUser, token, onLogout }) {
             />
           )}
 
-          {/* ✅ Delete Confirm Modal */}
           <DeleteConfirmModal
             isOpen={showDeleteModal}
             onClose={() => setShowDeleteModal(false)}
@@ -636,4 +782,5 @@ export default function MainApp({ initialUser, token, onLogout }) {
       </div>
     </div>
   );
+
 }
