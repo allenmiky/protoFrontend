@@ -3,6 +3,7 @@ import axios from "axios";
 // 🌐 Choose API base URL (env → railway → local)
 const API_BASE =
   import.meta.env.VITE_API_URL ||
+  "https://genuine-energy-production.up.railway.app" ||
   "http://localhost:5000/api";
 
 const API = axios.create({
