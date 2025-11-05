@@ -27,6 +27,15 @@ const ICONS = {
   qa: <FaBug className="text-orange-500 text-xl" />,
 };
 
+// Priority classes function
+const priorityClasses = (priority) => {
+  switch (priority) {
+    case 'high': return 'bg-red-100 text-red-700';
+    case 'medium': return 'bg-yellow-100 text-yellow-700';
+    case 'low': return 'bg-green-100 text-green-700';
+    default: return 'bg-gray-100 text-gray-700';
+  }
+};
 
 // ✅ MainApp Component
 export default function MainApp({ initialUser, token, onLogout }) {
@@ -58,14 +67,6 @@ export default function MainApp({ initialUser, token, onLogout }) {
   const [archivedCards, setArchivedCards] = useState({});
   const [showArchivedCards, setShowArchivedCards] = useState(false);
 
-
-  // ✅ Overdue check function
-  const isOverdue = (taskDate, completed) => {
-    if (!taskDate || completed) return false;
-    const today = new Date();
-    const dueDate = new Date(taskDate);
-    return dueDate < today;
-  };
 
   // ✅ Dark mode toggle
   useEffect(() => {
@@ -118,7 +119,7 @@ export default function MainApp({ initialUser, token, onLogout }) {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        console.log("Fetched tasks:", res.data); // ✅ yeh line add karo
+        console.log("Fetched tasks:", res.data);
 
         const grouped = res.data.reduce((acc, task) => {
           const col = task.status || "todo";
@@ -133,6 +134,11 @@ export default function MainApp({ initialUser, token, onLogout }) {
           });
           return acc;
         }, { todo: [], inprogress: [], done: [] });
+
+        // 🔝 Sort pinned tasks to top
+        Object.keys(grouped).forEach(col => {
+          grouped[col].sort((a, b) => (b.pinned === true) - (a.pinned === true));
+        });
 
         setBoards((prev) =>
           prev.map((b) =>
@@ -289,12 +295,8 @@ export default function MainApp({ initialUser, token, onLogout }) {
     }
   };
 
-
   const handleCompleteTask = (task) => {
     if (!task?._id) return console.error("Task has no _id:", task);
-
-    const now = new Date();
-    const isCompleted = !task.completed;
 
     const updatedTask = {
       ...task,
@@ -305,43 +307,40 @@ export default function MainApp({ initialUser, token, onLogout }) {
       ],
     };
 
-
-    updateTask(updatedTask); // ✅ ONLY pass updatedTask
+    updateTask(updatedTask);
   };
 
+  // ✅ Update Task function
+  const updateTask = async (updatedTask) => {
+    if (!token) return toast.error("Login required");
+    try {
+      const taskId = updatedTask._id || updatedTask.id;
 
-  // ✅ MainApp.jsx - updateTask function
-const updateTask = async (updatedTask) => {
-  if (!token) return toast.error("Login required");
-  try {
-    const taskId = updatedTask._id || updatedTask.id;
+      const payload = {
+        title: updatedTask.title,
+        description: updatedTask.desc || updatedTask.description,
+        date: updatedTask.date,
+        status: modalColumn,
+        board: activeBoardId,
+        completed: updatedTask.completed || false,
+        subtasks: (updatedTask.subtasks || []).map(st => ({
+          _id: st._id,
+          title: st.title,
+          status: st.status || modalColumn,
+          completed: st.completed || false,
+        })),
+      };
 
-    // Prepare payload with subtasks
-    const payload = {
-      title: updatedTask.title,
-      description: updatedTask.desc || updatedTask.description,
-      date: updatedTask.date,
-      status: modalColumn,
-      board: activeBoardId,
-      completed: updatedTask.completed || false,
-      subtasks: (updatedTask.subtasks || []).map(st => ({
-        _id: st._id,
-        title: st.title,
-        status: st.status || modalColumn,
-        completed: st.completed || false,
-      })),
-    };
+      const res = await axios.put(
+        `${API_BASE}/tasks/${taskId}`,
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-    const res = await axios.put(
-      `${API_BASE}/tasks/${taskId}`,
-      payload,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    setBoards((prev) =>
-      prev.map((b) =>
-        b._id === activeBoardId
-          ? {
+      setBoards((prev) =>
+        prev.map((b) =>
+          b._id === activeBoardId
+            ? {
               ...b,
               lists: {
                 ...b.lists,
@@ -350,24 +349,22 @@ const updateTask = async (updatedTask) => {
                 ),
               },
             }
-          : b
-      )
-    );
+            : b
+        )
+      );
 
-    toast.success("Task updated successfully!");
-    setEditTask(null);
-  } catch (err) {
-    console.error("Error updating task:", err);
-    toast.error("Error updating task");
-  }
-};
-
+      toast.success("Task updated successfully!");
+      setEditTask(null);
+    } catch (err) {
+      console.error("Error updating task:", err);
+      toast.error("Error updating task");
+    }
+  };
 
   // ✅ Archive Task function
   const handleArchiveTask = (task) => {
     if (!task) return;
 
-    // 1️⃣ Remove from board lists
     setBoards(prev =>
       prev.map(b => {
         if (b._id !== activeBoardId) return b;
@@ -383,7 +380,6 @@ const updateTask = async (updatedTask) => {
       })
     );
 
-    // 2️⃣ Add to archivedCards for this board
     setArchivedCards(prev => ({
       ...prev,
       [activeBoardId]: [...(prev[activeBoardId] || []), task]
@@ -415,52 +411,136 @@ const updateTask = async (updatedTask) => {
     }
   };
 
-  // ✅ Drag & Drop
-  const onDragEnd = async (result) => {
-    const { source, destination } = result;
-    if (!destination) return;
-    if (
-      source.droppableId === destination.droppableId &&
-      source.index === destination.index
-    )
-      return;
-
-    const board = boards.find((b) => b._id === activeBoardId);
-    const startList = [...board.lists[source.droppableId]];
-    const [moved] = startList.splice(source.index, 1);
-    const endList = [...board.lists[destination.droppableId]];
-    endList.splice(destination.index, 0, moved);
-
-    setBoards((prev) =>
-      prev.map((b) =>
-        b._id === activeBoardId
-          ? {
-            ...b,
-            lists: {
-              ...b.lists,
-              [source.droppableId]: startList,
-              [destination.droppableId]: endList,
-            },
-          }
-          : b
-      )
-    );
+  const handlePinTask = async (taskId) => {
+    if (!token) return toast.error("Login required");
 
     try {
-      await axios.put(
-        `${API_BASE}/tasks/${moved._id}`,
-        { status: destination.droppableId },
+      // 🔗 Toggle pinned state via API
+      const res = await axios.patch(
+        `${API_BASE}/tasks/${taskId}/pin`,
+        {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-    } catch {
-      toast.error("Failed to update task position");
+
+      const updatedTask = res.data;
+
+      // ✅ Safely update boards immutably
+      setBoards((prevBoards) =>
+        prevBoards.map((board) => {
+          if (board._id !== activeBoardId) return board;
+
+          const newLists = Object.fromEntries(
+            Object.entries(board.lists).map(([colId, tasks]) => {
+              // ✅ Create new task objects to ensure re-render
+              const updatedTasks = tasks.map((t) =>
+                t._id === taskId
+                  ? { ...t, pinned: updatedTask.pinned } // don’t replace whole object, only change pinned
+                  : { ...t } // clone to trigger React reconciliation
+              );
+
+              // ✅ Sort pinned first (consistent order)
+              const sortedTasks = [
+                ...updatedTasks.filter((t) => t.pinned),
+                ...updatedTasks.filter((t) => !t.pinned),
+              ];
+
+              return [colId, sortedTasks];
+            })
+          );
+
+          return { ...board, lists: newLists };
+        })
+      );
+
+      // ✅ Toast message
+      toast.success(
+        updatedTask.pinned ? "Task pinned 🔝" : "Task unpinned ⬇️"
+      );
+    } catch (err) {
+      console.error("Pin error:", err);
+      toast.error("Failed to pin task");
     }
   };
 
-  const activeBoard =
-    boards.find((b) => b._id === activeBoardId) || {
-      lists: { todo: [], inprogress: [], done: [] },
-    };
+
+
+  // ✅ Drag & Drop
+const onDragEnd = async (result) => {
+  const { source, destination } = result;
+  if (!destination) return;
+
+  // no change in position
+  if (
+    source.droppableId === destination.droppableId &&
+    source.index === destination.index
+  ) return;
+
+  // Update state first
+  let movedTaskId = null; // <-- store real _id
+
+  setBoards((prevBoards) => {
+    return prevBoards.map((board) => {
+      if (board._id !== activeBoardId) return board;
+
+      const sourceTasks = Array.from(board.lists[source.droppableId] || []);
+      const [movedTask] = sourceTasks.splice(source.index, 1);
+
+      movedTaskId = movedTask?._id; // <-- capture _id for API
+
+      // if same column
+      if (source.droppableId === destination.droppableId) {
+        sourceTasks.splice(destination.index, 0, movedTask);
+        return {
+          ...board,
+          lists: {
+            ...board.lists,
+            [source.droppableId]: sourceTasks,
+          },
+        };
+      }
+
+      // moving to another column
+      const destTasks = Array.from(board.lists[destination.droppableId] || []);
+      destTasks.splice(destination.index, 0, movedTask);
+
+      return {
+        ...board,
+        lists: {
+          ...board.lists,
+          [source.droppableId]: sourceTasks,
+          [destination.droppableId]: destTasks,
+        },
+      };
+    });
+  });
+
+  // Update backend with real _id
+  if (!movedTaskId) return;
+
+  try {
+    await axios.put(
+      `${API_BASE}/tasks/${movedTaskId}`,
+      { status: destination.droppableId },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+  } catch (err) {
+    toast.error("Failed to update task position");
+    console.error(err);
+  }
+};
+
+
+
+
+  const activeBoard = boards.find((b) => b._id === activeBoardId) || {
+    _id: 'default',
+    name: 'Add Board',
+    lists: {
+      todo: [],
+      inprogress: [],
+      done: []
+    },
+  };
 
   if (loading)
     return (
@@ -565,7 +645,8 @@ const updateTask = async (updatedTask) => {
 
         {/* MAIN */}
         <main className="flex-1 p-6 overflow-auto">
-          {activeBoardId && (
+          {/* ✅ HEADER - Only show when boards exist */}
+          {boards.length > 0 && activeBoardId && (
             <div className="flex items-center justify-between mb-6">
               <h1 className="text-3xl font-bold">{activeBoard.name}</h1>
 
@@ -580,7 +661,7 @@ const updateTask = async (updatedTask) => {
 
                 {showArchivedCards && (
                   <ArchiveCard
-                    archivedCards={archivedCards[activeBoardId] || []} // ✅ safe access
+                    archivedCards={archivedCards[activeBoardId] || []}
                     onClose={() => setShowArchivedCards(false)}
                     darkMode={dark}
                   />
@@ -609,7 +690,7 @@ const updateTask = async (updatedTask) => {
             column={modalColumn}
             task={editTask}
             darkMode={dark}
-            boardId={activeBoardId} // ✅ must pass
+            boardId={activeBoardId}
           />
 
           <AddBoardModal
@@ -622,19 +703,14 @@ const updateTask = async (updatedTask) => {
             darkMode={dark}
           />
 
-          {/* No Board Found */}
-          {boards.length === 0 && (
+          {/* ✅ MAIN CONTENT - Conditional Rendering */}
+          {boards.length === 0 ? (
+            // NO BOARDS MESSAGE - This will show on page reload when no boards
             <div className="flex flex-col items-center justify-center h-64 text-center mb-8">
-              <h2
-                className={`text-2xl font-semibold mb-3 ${dark ? "text-gray-400" : "text-gray-600"
-                  }`}
-              >
+              <h2 className={`text-2xl font-semibold mb-3 ${dark ? "text-gray-400" : "text-gray-600"}`}>
                 No Board Added
               </h2>
-              <p
-                className={`mb-6 text-sm ${dark ? "text-gray-500" : "text-gray-400"
-                  }`}
-              >
+              <p className={`mb-6 text-sm ${dark ? "text-gray-500" : "text-gray-400"}`}>
                 Create your first board to get started 🚀
               </p>
               <button
@@ -647,119 +723,167 @@ const updateTask = async (updatedTask) => {
                 <FiPlus className="text-lg" /> Add Board
               </button>
             </div>
-          )}
-
-          {/* Task Columns */}
-          {boards.length > 0 && (
+          ) : (
+            // COLUMNS - Only show when boards exist
             <div className="max-w-7xl mx-auto grid md:grid-cols-3 gap-5">
               <DragDropContext onDragEnd={onDragEnd}>
-                {Object.entries(activeBoard.lists ?? {}).map(([colId, tasks = []]) => (
-                  <Droppable key={colId} droppableId={colId}>
-                    {(provided) => (
-                      <div
-                        {...provided.droppableProps}
-                        ref={provided.innerRef}
-                        className={`rounded-2xl p-4 shadow-md transition-all ${dark ? "bg-gray-800" : "bg-white"}`}
-                      >
-                        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                          {ICONS[colId] || <FaClipboardList className="text-gray-500 text-xl" />}
-                          <span className="capitalize">
-                            {colId === "todo"
-                              ? "To Do"
-                              : colId === "inprogress"
-                                ? "In Progress"
-                                : colId === "done"
-                                  ? "Done"
-                                  : colId}
-                          </span>
-                          <span className="ml-auto text-sm text-gray-500">({tasks.length})</span>
-                        </h2>
+                {Object.entries(activeBoard.lists ?? {}).map(([colId, allTasks = []]) => {
+                  // ✅ Separate pinned + unpinned for clean render
+                  const pinnedTasks = allTasks.filter((t) => t.pinned);
+                  const unpinnedTasks = allTasks.filter((t) => !t.pinned);
+                  const tasks = [...pinnedTasks, ...unpinnedTasks]; // merge for render order
 
-                        {tasks.map((task, index) => (
-                          <Draggable key={task._id} draggableId={task._id} index={index}>
-                            {(provided, snapshot) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                                className={`relative group mb-3 p-4 rounded-xl border shadow-sm cursor-pointer transition-all overflow-hidden
-                        ${task.completed ? (dark ? "bg-green-700/30 border-green-500" : "bg-green-100 border-green-400") : (dark ? "bg-gray-700 border-gray-600 text-gray-100" : "bg-white border-gray-200 text-gray-900")}
+                  return (
+                    <Droppable key={colId} droppableId={colId}>
+                      {(provided) => (
+                        <div
+                          {...provided.droppableProps}
+                          ref={provided.innerRef}
+                          className={`rounded-2xl p-4 shadow-md transition-all ${dark ? "bg-gray-800" : "bg-white"
+                            }`}
+                        >
+                          {/* --- Column header --- */}
+                          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                            {ICONS[colId] || (
+                              <FaClipboardList className="text-gray-500 text-xl" />
+                            )}
+                            <span className="capitalize">
+                              {colId === "todo"
+                                ? "To Do"
+                                : colId === "inprogress"
+                                  ? "In Progress"
+                                  : colId === "done"
+                                    ? "Done"
+                                    : colId}
+                            </span>
+                            <span className="ml-auto text-sm text-gray-500">
+                              ({tasks.length})
+                            </span>
+                          </h2>
+
+                          {/* --- Tasks loop --- */}
+                          {tasks.map((task, index) => {
+                            const uniqueId = `col-${colId}-task-${task._id ?? index}`;
+
+                            return (
+                              <Draggable key={uniqueId} draggableId={String(uniqueId)} index={index}>
+                                {(provided, snapshot) => (
+                                  <div
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    {...provided.dragHandleProps}
+                                    className={`relative group mb-3 p-4 rounded-xl border shadow-sm cursor-pointer transition-all overflow-hidden
+                        ${task.pinned
+                                        ? "border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20"
+                                        : task.completed
+                                          ? dark
+                                            ? "bg-green-700/30 border-green-500"
+                                            : "bg-green-100 border-green-400"
+                                          : dark
+                                            ? "bg-gray-700 border-gray-600 text-gray-100"
+                                            : "bg-white border-gray-200 text-gray-900"
+                                      }
                         ${snapshot.isDragging ? "shadow-lg scale-105 z-10" : ""}
                       `}
-                                onClick={() => {
-                                  setEditTask(task);
-                                  setModalColumn(colId);
-                                  setShowModal(true);
-                                }}
-                              >
-                                {/* Task Menu */}
-                                <div className="absolute top-2 right-2">
-                                  <TaskCardMenu
-                                    taskId={task._id}
-                                    onDelete={() => deleteTask(task._id)}
-                                    onArchive={() => handleArchiveTask(task)} // pass full task
-                                    onPin={() => handlePinTask(task._id)}
-                                  />
-                                </div>
-
-                                {/* Title + Overdue */}
-                                <h3 className="font-semibold text-base flex items-center gap-2 mb-1">
-                                  {task.title}
-                                  {!task.completed && task.date && new Date(task.date) < new Date() && (
-                                    <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-rose-100 text-rose-600">
-                                      Overdue
-                                    </span>
-                                  )}
-                                </h3>
-
-                                {/* Description */}
-                                {(task.description || task.desc) && (
-                                  <TaskDescription desc={task.description || task.desc} />
-                                )}
-
-                                {/* Bottom row: priority + date */}
-                                <div className="flex items-center justify-between mt-3">
-                                  {task.priority && (
-                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${priorityClasses(task.priority)}`}>
-                                      {task.priority}
-                                    </span>
-                                  )}
-                                  {task.date && (
-                                    <div className="flex items-center gap-1 text-[11px] text-green-500">
-                                      <FiCalendar className="text-xs" />
-                                      <span>{new Date(task.date).toLocaleDateString()}</span>
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Complete checkbox */}
-                                <div className="absolute bottom-2 right-2">
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleCompleteTask(task);
+                                    onClick={() => {
+                                      setEditTask(task);
+                                      setModalColumn(colId);
+                                      setShowModal(true);
                                     }}
-                                    className={`w-6 h-6 rounded-full border flex items-center justify-center transition-all duration-300 
-                            ${task.completed ? "bg-green-500 border-green-600 opacity-100" : "bg-white dark:bg-gray-800 border-gray-400 dark:border-gray-500 opacity-0 group-hover:opacity-100"}
-                          `}
                                   >
-                                    {task.completed && <span className="text-white text-sm font-bold">✓</span>}
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-                          </Draggable>
-                        ))}
+                                    {/* --- Task menu --- */}
+                                    <div className="absolute top-2 right-2">
+                                      <TaskCardMenu
+                                        taskId={task._id}
+                                        pinned={task.pinned} // ✅ pass here
+                                        onDelete={() => deleteTask(task._id)}
+                                        onArchive={() => handleArchiveTask(task)}
+                                        onPin={() => handlePinTask(task._id)}
+                                        onEdit={() => {
+                                          setEditTask(task);
+                                          setModalColumn(colId);
+                                          setShowModal(true);
+                                        }}
+                                        darkMode={dark}
+                                      />
 
-                        {provided.placeholder}
-                      </div>
-                    )}
-                  </Droppable>
-                ))}
+                                    </div>
+
+                                    {/* --- Title --- */}
+                                    <h3 className="font-semibold text-base flex items-center gap-2 mb-1 pr-8">
+                                      {task.pinned && (
+                                        <motion.span
+                                          initial={{ scale: 0 }}
+                                          animate={{ scale: 1, rotate: 360 }}
+                                          transition={{ duration: 0.4 }}
+                                          className="text-yellow-500"
+                                        >
+                                          ⭐
+                                        </motion.span>
+                                      )}
+                                      {task.title}
+                                    </h3>
+
+                                    {/* --- Description --- */}
+                                    {(task.description || task.desc) && (
+                                      <TaskDescription desc={task.description || task.desc} />
+                                    )}
+
+                                    {/* --- Footer --- */}
+                                    <div className="flex items-center justify-between mt-3">
+                                      {task.priority && (
+                                        <span
+                                          className={`text-xs font-semibold px-2 py-0.5 rounded-full ${priorityClasses(
+                                            task.priority
+                                          )}`}
+                                        >
+                                          {task.priority}
+                                        </span>
+                                      )}
+                                      {task.date && (
+                                        <div className="flex items-center gap-1 text-[11px] text-green-500">
+                                          <FiCalendar className="text-xs" />
+                                          <span>
+                                            {new Date(task.date).toLocaleDateString()}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* --- Complete button --- */}
+                                    <div className="absolute bottom-2 right-2">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleCompleteTask(task);
+                                        }}
+                                        className={`w-6 h-6 rounded-full border flex items-center justify-center transition-all duration-300 
+                            ${task.completed
+                                            ? "bg-green-500 border-green-600 opacity-100"
+                                            : "bg-white dark:bg-gray-800 border-gray-400 dark:border-gray-500 opacity-0 group-hover:opacity-100"
+                                          }
+                          `}
+                                      >
+                                        {task.completed && (
+                                          <span className="text-white text-sm font-bold">✓</span>
+                                        )}
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                              </Draggable>
+                            );
+                          })}
+
+                          {provided.placeholder}
+                        </div>
+                      )}
+                    </Droppable>
+                  );
+                })}
               </DragDropContext>
             </div>
           )}
-
 
           {showArchive && (
             <ArchiveDrawer
@@ -782,5 +906,4 @@ const updateTask = async (updatedTask) => {
       </div>
     </div>
   );
-
 }

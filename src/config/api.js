@@ -1,16 +1,15 @@
-// src/config/api.js
 import axios from "axios";
 
-<<<<<<< HEAD
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-=======
-const API_BASE = import.meta.env.VITE_API_URL || "https://genuine-energy-production.up.railway.app/api";
->>>>>>> f58b71e3ff5f424d25b2ee25d6c6bd360daa8e84
+// 🌐 Choose API base URL (env → railway → local)
+const API_BASE =
+  import.meta.env.VITE_API_URL ||
+  "http://localhost:5000/api";
 
 const API = axios.create({
   baseURL: API_BASE,
 });
 
+// Attach JWT token
 API.interceptors.request.use((req) => {
   const token = localStorage.getItem("token");
   if (token) req.headers.Authorization = `Bearer ${token}`;
@@ -18,7 +17,6 @@ API.interceptors.request.use((req) => {
 });
 
 // ------- Board APIs -------
-// export const getBoards = () => API.get("/boards");
 export const createBoard = (name) => API.post("/boards", { name });
 export const deleteBoard = (id) => API.delete(`/boards/${id}`);
 export const archiveBoard = (id) => API.put(`/boards/${id}/archive`);
@@ -29,6 +27,6 @@ export const createTask = (task) => API.post("/tasks", task);
 export const deleteTask = (id) => API.delete(`/tasks/${id}`);
 export const updateTask = (id, updates) => API.put(`/tasks/${id}`, updates);
 
-// ✅ Export both base URL and axios instance
-export { API };              // 👈 ADD THIS LINE
+// ✅ Export API + base URL
+export { API };
 export default API_BASE;

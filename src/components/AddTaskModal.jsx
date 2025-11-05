@@ -198,10 +198,20 @@ const DueDateTimePicker = ({ value, onChange, darkMode }) => {
       >
         <span className="flex items-center gap-2">
           <FiClock size={16} className="text-indigo-400" />
-          {value
-            ? `${new Date(value).toLocaleDateString()} • ${new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-            : t('selectDateTime')}
+
+          {value ? (
+            <div className="flex items-center gap-1 text-[12px] text-green-500">
+              <FiCalendar className="text-xs" />
+              <span>
+                {new Date(value).toLocaleDateString()} •{" "}
+                {new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            </div>
+          ) : (
+            t("selectDateTime")
+          )}
         </span>
+
         <FiChevronDown className={`transition-transform ${open ? 'rotate-180' : ''}`} size={16} />
       </motion.button>
 
@@ -313,15 +323,38 @@ export default function AddTaskModal({
   const [history, pushHistory] = useStatusHistory();
   const allCustomStatuses = [...customStatuses, ...tempCustomStatuses];
 
+  useEffect(() => {
+    if (subtasks.length) {
+      localStorage.setItem('draft_subtasks', JSON.stringify(subtasks));
+    }
+  }, [subtasks]);
+  useEffect(() => {
+    if (!isOpen) {
+      localStorage.removeItem('draft_subtasks');
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isEdit) { // sirf new task ke liye draft load karo
+      const saved = localStorage.getItem('draft_subtasks');
+      if (saved) setSubtasks(JSON.parse(saved));
+    }
+  }, [isEdit]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('draft_subtasks');
+    if (saved) setSubtasks(JSON.parse(saved));
+  }, []);
   /* ---------- effects ---------- */
   useEffect(() => {
     if (!isOpen) return;
     if (isEdit) {
       setTitle(task.title || '');
       setDesc(task.desc || task.description || '');
-      setDateTime(task.dateTime || '');
+      // ✅ Yahan bhi check karo konsa field name hai
+      setDateTime(task.dateTime || task.date || ''); // Dono check karo
       setStatus(task.status || task.column || column || 'todo');
-      setSubtasks((task.subtasks || []).map(st => ({
+      setSubtasks((task?.subtasks || []).map(st => ({
         id: st._id || st.id || Date.now() + Math.random(),
         title: st.title,
         done: st.completed || false,
@@ -329,8 +362,14 @@ export default function AddTaskModal({
       })));
       if (task.history) pushHistory(task.history);
       if (task.userLang && task.userLang !== i18n.language) i18n.changeLanguage(task.userLang);
+
+      // ✅ Debug existing task data
+      console.log('Editing task:', task);
     } else {
-      setTitle(''); setDesc(''); setDateTime(''); setSubtasks([]);
+      setTitle('');
+      setDesc('');
+      setDateTime('');
+      setSubtasks([]);
       setStatus(column || 'todo');
     }
   }, [isOpen, task, column]);
@@ -381,7 +420,14 @@ export default function AddTaskModal({
       date: dateTime ? new Date(dateTime).toISOString() : null,
       status,
       column: status,
-      subtasks: subtasks.map(st => ({ title: st.title, completed: st.done, subtasks: st.subtasks })),
+      subtasks: subtasks.map(st => ({
+        title: st.title,
+        completed: st.done,
+        subtasks: st.subtasks.map(child => ({
+          title: child.title,
+          completed: child.done, // ✅ Yeh ensure karo ke bhej raha hai
+        })),
+      })),
       history,
       userLang: i18n.language,
     };
@@ -409,7 +455,7 @@ export default function AddTaskModal({
   const panel = `${full ? 'w-[98vw] h-[96vh]' : 'w-full max-w-2xl max-h-[90vh]'} overflow-y-auto rounded-2xl border shadow-xl p-6 thin-scroll ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`;
 
   return (
-    <div className={wrapper} onClick={onClose}>
+    <div className={wrapper}>
       <motion.div onClick={e => e.stopPropagation()} initial={{ opacity: 0, y: 60 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 60 }} className={panel}>
         {/* header */}
         <div className="flex justify-between items-center mb-5">
@@ -425,7 +471,18 @@ export default function AddTaskModal({
           {/* Title */}
           <div>
             <label className="block mb-1 text-sm font-medium">{t('title')}</label>
-            <input value={title} onChange={e => setTitle(e.target.value)} required className={`w-full px-3 py-2 rounded-xl border ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-300'}`} placeholder={t('enterTitle')} />
+            <input
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              required
+              placeholder={t('enterTitle')}
+              className={`
+    w-full px-3 py-2 rounded-xl border
+    ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-gray-50 border-gray-300 text-gray-900'}
+    focus:outline-none focus:ring-2 focus:ring-indigo-400 hover:border-indigo-400
+    transition-all duration-200
+  `}
+            />
           </div>
 
           {/* Description */}
@@ -437,63 +494,66 @@ export default function AddTaskModal({
                 rows={rows}
                 value={desc}
                 onChange={e => setDesc(e.target.value)}
-                className={`w-full px-3 py-2 rounded-xl border resize-none ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-300'
-                  }`}
                 placeholder={t('enterDetails')}
+                className={`
+    w-full px-3 py-2 rounded-xl border resize-none
+    ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-gray-50 border-gray-300 text-gray-900'}
+    focus:outline-none focus:ring-2 focus:ring-indigo-400 hover:border-indigo-400
+    transition-all duration-200
+  `}
               />
               <div onMouseDown={(e) => { const start = e.clientY; const startRows = rows; const move = mv => { const d = Math.round((mv.clientY - start) / 10); setRows(Math.max(4, Math.min(30, startRows + d))); }; const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); }; document.addEventListener('mousemove', move); document.addEventListener('mouseup', up); }} className="absolute bottom-2 right-2 cursor-ns-resize text-gray-400 hover:text-indigo-500"><FiChevronDown size={16} /></div>
             </div>
           </div>
 
-{/* Due + Status */}
-<div
-  className="flex flex-col sm:flex-row sm:items-end gap-4 p-3 rounded-xl border
+          {/* Due + Status */}
+          <div
+            className="flex flex-col sm:flex-row sm:items-end gap-4 p-3 rounded-xl border
   dark:border-gray-700 border-gray-300 bg-white dark:bg-gray-900/50 shadow-sm"
->
-  {/* Due Date Picker */}
-  <div className="flex-1">
-    <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-200">
-      {t('due')}
-    </label>
-    <DueDateTimePicker
-      value={dateTime}
-      onChange={setDateTime}
-      darkMode={darkMode}
-    />
-  </div>
+          >
+            {/* Due Date Picker */}
+            <div className="flex-1">
+              <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-200">
+                {t('due')}
+              </label>
+              <DueDateTimePicker
+                value={dateTime}
+                onChange={setDateTime}
+                darkMode={darkMode}
+              />
+            </div>
 
-  {/* Status Dropdown */}
-  <div className="flex-1">
-    <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-200">
-      {t('status')}
-    </label>
-    <StatusSelect
-      value={status}
-      onChange={changeStatus}
-      darkMode={darkMode}
-      customStatuses={allCustomStatuses}
-      onDelete={delCustom}
-    />
-  </div>
+            {/* Status Dropdown */}
+            <div className="flex-1">
+              <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-200">
+                {t('status')}
+              </label>
+              <StatusSelect
+                value={status}
+                onChange={changeStatus}
+                darkMode={darkMode}
+                customStatuses={allCustomStatuses}
+                onDelete={delCustom}
+              />
+            </div>
 
-  {/* Icon Picker Button */}
-  {(() => {
-    const SelectedIcon = ICONS_MAP[iconKey];
-    return (
-      <button
-        type="button"
-        onClick={() => setShowIconPicker(true)}
-        className={`flex items-center justify-center gap-2 
+            {/* Icon Picker Button */}
+            {(() => {
+              const SelectedIcon = ICONS_MAP[iconKey];
+              return (
+                <button
+                  type="button"
+                  onClick={() => setShowIconPicker(true)}
+                  className={`flex items-center justify-center gap-2 
           h-[38px] px-3 rounded-xl border transition-all 
-          hover:bg-indigo-500/10 ${
-            darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-300 bg-gray-50'
-          }`}
-      >
-        <SelectedIcon size={18} color={ICON_COLORS[iconKey]} />
-      </button>
-    );
-  })()}
-</div>
+          hover:bg-indigo-500/10 ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-300 bg-gray-50'
+                    }`}
+                >
+                  <SelectedIcon size={18} color={ICON_COLORS[iconKey]} />
+                </button>
+              );
+            })()}
+          </div>
 
 
           {/* Quick status buttons */}
@@ -513,7 +573,12 @@ export default function AddTaskModal({
               value={newStatus}
               onChange={e => setNewStatus(e.target.value)}
               placeholder={t('addCustom')}
-              className={`flex-1 px-3 py-2 rounded-xl border ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-300'}`}
+              className={`
+    flex-1 px-3 py-2 rounded-xl border
+    ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-gray-50 border-gray-300 text-gray-900'}
+    focus:outline-none focus:ring-2 focus:ring-indigo-400 hover:border-indigo-400
+    transition-all duration-200
+  `}
             />
 
             <button
@@ -582,37 +647,79 @@ export default function AddTaskModal({
             {subtasks.map((sub, idx) => (
               <div
                 key={sub.id}
-                className={`mb-2 rounded-xl p-2 transition ${sub.done ? 'bg-red-100 border border-red-300' : ''
-                  }`}
+                className={`
+    mb-3 rounded-2xl p-3 transition-all duration-300
+    ${sub.done
+                    ? 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 shadow-emerald-500/10'
+                    : 'bg-white/60 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 backdrop-blur-sm'
+                  }
+    focus-within:ring-2 focus-within:ring-indigo-400
+    hover:shadow-lg hover:scale-[1.01] hover:border-indigo-300 dark:hover:border-indigo-500
+  `}
               >
-                <div className="flex items-center gap-2">
-                  <input value={sub.title} onChange={e => { const c = [...subtasks]; c[idx].title = e.target.value; setSubtasks(c); }} className={`flex-1 px-3 py-2 rounded-xl border ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-300'}`} placeholder={`${t('subtask')} ${idx + 1}`} />
-                  {/* Stylish Check Button */}
-                  <button
-                    type="button"
-                    onClick={() => {
+                <div className="flex items-center gap-3">
+                  {/* Input Field */}
+                  <input
+                    value={sub.title}
+                    onChange={e => {
                       const c = [...subtasks];
-                      c[idx].done = !c[idx].done;
+                      c[idx].title = e.target.value;
                       setSubtasks(c);
                     }}
-                    className={`p-2 rounded-lg transition ${sub.done ? 'bg-red-600 text-white' : 'text-green-500 hover:text-green-600'
-                      }`}
-                  >
-                    <FiCheckCircle size={18} />
-                  </button>
+                    className={`
+        flex-1 px-3 py-2 rounded-xl border text-sm
+        ${sub.done
+                        ? 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-600 line-through text-emerald-700 dark:text-emerald-300'
+                        : 'bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100'
+                      }
+        focus:outline-none focus:ring-2 focus:ring-indigo-400
+        transition-all duration-200
+      `}
+                    placeholder={`${t('subtask')} ${idx + 1}`}
+                  />
 
-                  {/* Delete Button */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const c = [...subtasks];
-                      c.splice(idx, 1);
-                      setSubtasks(c);
-                    }}
-                    className="p-2 rounded-lg text-red-500 hover:text-red-600"
-                  >
-                    <FiTrash2 size={18} />
-                  </button>
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-2">
+                    {/* ✅ Toggle Done */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const c = [...subtasks];
+                        c[idx].done = !c[idx].done;
+                        setSubtasks(c);
+                      }}
+                      className={`
+          grid place-items-center w-9 h-9 rounded-full
+          transition-all duration-200 ease-out
+          ${sub.done
+                          ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30 scale-110'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 hover:bg-emerald-400 hover:text-white'
+                        }
+        `}
+                      aria-label="Toggle subtask"
+                    >
+                      <FiCheckCircle size={18} />
+                    </button>
+
+                    {/* ❌ Delete */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const c = [...subtasks];
+                        c.splice(idx, 1);
+                        setSubtasks(c);
+                      }}
+                      className={`
+          grid place-items-center w-9 h-9 rounded-full
+          bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300
+          hover:bg-rose-500 hover:text-white
+          transition-all duration-200
+        `}
+                      aria-label="Delete subtask"
+                    >
+                      <FiTrash2 size={18} />
+                    </button>
+                  </div>
                 </div>
                 <AnimatePresence>
                   {expanded[idx] && (
@@ -633,16 +740,14 @@ export default function AddTaskModal({
 
                           {/* Input */}
                           <input
-                            className={`flex-1 px-3 py-2 rounded-xl border ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-300'
-                              } ${sub.done ? 'line-through text-red-600 font-semibold' : ''}`}
+                            className={`flex-1 px-3 py-2 rounded-xl border text-sm ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-300'
+                              } ${child.done ? 'line-through text-gray-400' : ''}`}
                             value={child.title}
                             onChange={(e) => {
                               const c = [...subtasks];
-                              c[idx].subtasks[i].title = e.target.value;
+                              c[idx].subtasks[i].done = e.target.checked; // ✅ Yeh missing tha
                               setSubtasks(c);
                             }}
-                            className={`flex-1 px-3 py-2 rounded-xl border ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-300'
-                              }`}
                             placeholder={`${t('nestedSubtask')} ${i + 1}`}
                           />
 
