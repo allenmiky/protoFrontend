@@ -1,6 +1,7 @@
 // AddTaskModal.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import LanguageDetector from "i18next-browser-languagedetector";
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiX, FiPlus, FiTrash2, FiClock, FiChevronDown, FiChevronUp,
